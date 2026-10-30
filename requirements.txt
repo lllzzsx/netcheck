@@ -1,0 +1,11 @@
+# netcheck 依赖
+#
+# 安装：python -m pip install -r requirements.txt
+
+# 设备 SSH 交互。netmiko 是 Paramiko 的「网络设备增强版」：
+#   Paramiko 只给一条 SSH 通道，提示符、分页、退出全得自己处理
+#   netmiko 认识华为/思科/华三的提示符、自动关分页、知道怎么优雅退出
+netmiko>=4.0
+
+# 测试（只跑代码不需要它）
+pytest>=8.0

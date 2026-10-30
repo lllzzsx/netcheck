@@ -1,0 +1,12 @@
+#
+sysname R5
+#
+vlan batch 100
+#
+interface Vlanif100
+ ip address 192.168.100.1 255.255.255.0
+#
+interface LoopBack0
+ ip address 5.5.5.5 255.255.255.255
+#
+return

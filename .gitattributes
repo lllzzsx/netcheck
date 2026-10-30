@@ -1,0 +1,8 @@
+# 所有文本文件在仓库里统一用 LF
+# 这样 Windows / Linux / macOS 上 clone 下来，git diff 看到的都是真实改动，
+# 而不是「整份文件每一行都变了」——那是 CRLF 和 LF 打架。
+* text=auto eol=lf
+
+# 这些是二进制，别让 git 去猜编码
+*.png binary
+*.jpg binary

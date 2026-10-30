@@ -1,0 +1,25 @@
+{
+  "concurrency": {
+    "max_workers": 5,
+    "max_retry": 3,
+    "retry_wait": 2
+  },
+  "connection": {
+    "timeout": 30,
+    "conn_timeout": 10
+  },
+  "commands": {
+    "huawei": "display current-configuration",
+    "hp_comware": "display current-configuration",
+    "cisco_ios": "show running-config"
+  },
+  "paths": {
+    "devices": "devices.csv",
+    "mock_configs": "mock_configs",
+    "reports": "reports"
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "run.log"
+  }
+}

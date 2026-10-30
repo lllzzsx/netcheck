@@ -1,0 +1,27 @@
+# ---------- Python 产物 ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# ---------- 虚拟环境 ----------
+.venv/
+venv/
+env/
+
+# ---------- 运行产物 ----------
+# 每次巡检都会生成新的报告，属于「输出」不是「源码」，不该进仓库
+reports/
+*.log
+
+# ---------- 真实设备清单 ----------
+# 里面有明文密码，绝对不能提交。仓库里只放 devices.example.csv 模板。
+devices.csv
+
+# ---------- 编辑器 / 系统 ----------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

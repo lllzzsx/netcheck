@@ -1,0 +1,12 @@
+#
+sysname R1
+#
+vlan batch 10
+#
+interface Vlanif10
+ ip address 192.168.10.1 255.255.255.0
+#
+interface LoopBack0
+ ip address 1.1.1.1 255.255.255.255
+#
+return

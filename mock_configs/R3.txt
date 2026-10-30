@@ -1,0 +1,7 @@
+#
+sysname R3
+#
+interface LoopBack0
+ ip address 3.3.3.3 255.255.255.255
+#
+return

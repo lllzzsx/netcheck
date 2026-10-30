@@ -1,0 +1,6 @@
+﻿name,ip,device_type,username,password,port
+R1,192.168.106.101,huawei,netdev,Demo-Pass-123,22
+R2,192.168.106.102,huawei,netdev,Demo-Pass-123,22
+R3,192.168.106.103,huawei,netdev,Demo-Pass-123,22
+R4,192.168.106.104,huawei,netdev,Demo-Pass-123,22
+R5,192.168.106.105,huawei,netdev,Demo-Pass-123,22

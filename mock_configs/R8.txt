@@ -1,0 +1,12 @@
+#
+sysname R8
+#
+vlan batch 200
+#
+interface Vlanif200
+ ip address 192.168.200.1 255.255.255.0
+#
+interface LoopBack0
+ ip address 8.8.8.8 255.255.255.255
+#
+return
