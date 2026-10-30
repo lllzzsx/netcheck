@@ -11,7 +11,7 @@ netcheck 主程序：设备配置巡检。
     python device_check.py
     python device_check.py --config my.json
     python device_check.py --workers 10               # 命令行压过 json
-    "  python device_check.py --devices devices_demo.csv\n"
+            "  python device_check.py --devices devices_demo.csv\n"
     python device_check.py --show-config              # 只看最终生效的配置
     python device_check.py --dump-config out.json     # 导出当前配置
     python device_check.py --real                     # 连真机
