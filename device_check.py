@@ -11,6 +11,7 @@ netcheck 主程序：设备配置巡检。
     python device_check.py
     python device_check.py --config my.json
     python device_check.py --workers 10               # 命令行压过 json
+    "  python device_check.py --devices devices_demo.csv\n"
     python device_check.py --show-config              # 只看最终生效的配置
     python device_check.py --dump-config out.json     # 导出当前配置
     python device_check.py --real                     # 连真机
@@ -24,6 +25,13 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+
+# Windows 的默认控制台编码是 GBK，打印 ⚠ 这类符号会直接
+# UnicodeEncodeError 崩掉。reconfigure 把标准输出改成 UTF-8。
+# 放在所有 print 之前执行；Linux/macOS 本来就 UTF-8，这段是空操作。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
@@ -184,6 +192,7 @@ def build_parser():
             "示例：\n"
             "  python device_check.py\n"
             "  python device_check.py --workers 10\n"
+            "  python device_check.py --devices devices_demo.csv\n"
             "  python device_check.py --show-config\n"
             "  python device_check.py --config prod.json --real\n"
         ),
@@ -192,6 +201,8 @@ def build_parser():
                         help="配置文件路径（默认 config.json；不存在就用代码里的默认值）")
     parser.add_argument("--real", action="store_true",
                         help="真机模式；不写就是 mock 模式")
+    parser.add_argument("--devices", default=None, metavar="CSV",
+                        help="设备清单路径（默认取配置里的 paths.devices）")
     parser.add_argument("--workers", type=int, default=None, metavar="N",
                         help="并发数（覆盖配置文件里的值）")
     parser.add_argument("--retry", type=int, default=None, metavar="N",
@@ -216,6 +227,8 @@ def apply_cli_overrides(cfg, args):
         3         = 用户敲了 --workers 3，用 3 覆盖
     如果 default 写成 5，就永远分不清“没敲”和“敲了 5”。
     """
+    if args.devices is not None:
+        cfg.paths.devices = args.devices
     if args.workers is not None:
         cfg.concurrency.max_workers = args.workers
     if args.retry is not None:

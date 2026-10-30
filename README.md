@@ -1,6 +1,6 @@
 # netcheck · 网络设备配置巡检工具
 
-[![tests](https://img.shields.io/badge/tests-56%20passed-brightgreen)](#测试)
+[![tests](https://img.shields.io/badge/tests-59%20passed-brightgreen)](#测试)
 [![python](https://img.shields.io/badge/python-3.10%2B-blue)](#环境)
 
 批量登录华为/华三/思科设备，抓取当前配置，统计接口数量与配置体积，并对**配置漂移**（设备自称的 sysname 与清单不符）告警，最后输出终端报表和 CSV 存档。
@@ -18,7 +18,7 @@
 | 配置漂移检测 | 解析配置里的 `sysname`，与清单里的设备名比对，不一致即告警 |
 | 三层配置 | 代码内置默认值 < `config.json` < 命令行参数，优先级明确 |
 | 双模式运行 | `--real` 走 SSH 连真机；不写则读本地文件（mock），无需设备即可演示和测试 |
-| 可测试 | 解析、配置、模型三层共 56 个单元测试，不依赖任何网络 |
+| 可测试 | 解析、配置、模型三层共 59 个单元测试，不依赖任何网络 |
 
 ---
 
@@ -83,6 +83,7 @@ R5      192.168.106.105   R5        成功        159     2       0.0s
 |---|---|---|
 | `--config JSON` | 指定配置文件 | `config.json` |
 | `--real` | 连真机（不写则 mock） | mock |
+| `--devices CSV` | 指定设备清单 | 配置里的 `paths.devices` |
 | `--workers N` | 并发数 | 配置文件里的 5 |
 | `--retry N` | SSH 超时重试次数 | 配置文件里的 3 |
 | `--log-level LV` | DEBUG / INFO / WARNING / ERROR | 配置文件里的 INFO |
@@ -136,7 +137,7 @@ python device_check.py --show-config --workers 10
 
 ```bash
 python -m pytest -q
-# 56 passed
+# 59 passed
 ```
 
 测试全部针对纯函数和纯数据，**不连任何设备**，所以能在没有 lab 环境的机器上跑。

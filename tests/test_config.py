@@ -145,5 +145,46 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(cfg.commands.huawei, "显示当前配置")
 
 
+class TestApplyCliOverrides(unittest.TestCase):
+    """测「命令行压过配置文件」这一步。
+
+    这里最容易出的错是把 default 写成具体值（比如 --workers 默认 5），
+    那样就永远分不清「用户没敲」和「用户敲了 5」，配置文件的设置会失效。
+    """
+
+    def _args(self, **kwargs):
+        """造一个只有我们需要字段的假 args 对象。"""
+        class A:
+            pass
+        a = A()
+        a.devices = kwargs.get("devices")
+        a.workers = kwargs.get("workers")
+        a.retry = kwargs.get("retry")
+        a.log_level = kwargs.get("log_level")
+        return a
+
+    def test_没敲参数就保持配置里的值(self):
+        from device_check import Config, apply_cli_overrides
+        cfg = Config({"concurrency": {"max_workers": 5}, "logging": {"level": "INFO"}})
+        apply_cli_overrides(cfg, self._args())
+        self.assertEqual(cfg.concurrency.max_workers, 5)
+        self.assertEqual(cfg.logging.level, "INFO")
+
+    def test_敲了参数就覆盖(self):
+        from device_check import Config, apply_cli_overrides
+        cfg = Config({"concurrency": {"max_workers": 5}, "logging": {"level": "INFO"}})
+        apply_cli_overrides(cfg, self._args(workers=10, log_level="DEBUG"))
+        self.assertEqual(cfg.concurrency.max_workers, 10)
+        self.assertEqual(cfg.logging.level, "DEBUG")
+
+    def test_devices能覆盖配置里的清单路径(self):
+        from device_check import Config, apply_cli_overrides
+        cfg = Config({"paths": {"devices": "devices.csv"}})
+        apply_cli_overrides(cfg, self._args(devices="devices_demo.csv"))
+        self.assertEqual(cfg.paths.devices, "devices_demo.csv")
+        # _data 也必须跟着变，否则 --show-config 会打印旧值
+        self.assertEqual(cfg.to_dict()["paths"]["devices"], "devices_demo.csv")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
