@@ -140,6 +140,8 @@ class TestInspectResult(unittest.TestCase):
         self.assertEqual(list(d), [
             "name", "ip", "sysname", "status",
             "bytes", "ifaces", "elapsed", "note", "drift",
+            # --audit 之后新增的四列
+            "score", "high", "medium", "low",
         ])
 
     def test_to_dict不含内部属性(self):

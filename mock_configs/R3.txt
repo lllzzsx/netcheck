@@ -1,7 +1,17 @@
 #
 sysname R3
 #
+http server enable
+#
 interface LoopBack0
  ip address 3.3.3.3 255.255.255.255
+#
+user-interface vty 0 4
+ authentication-mode aaa
+ acl 2001 inbound
+#
+snmp-agent community read NetMon_2026
+#
+info-center loghost 192.168.106.200
 #
 return

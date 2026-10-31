@@ -37,6 +37,7 @@ from netmiko import ConnectHandler
 from netmiko.exceptions import NetmikoTimeoutException, NetmikoAuthenticationException
 
 from models import Device, InspectResult
+from security import audit_config, count_by_level, score_of
 
 
 # ---------- 路径 ----------
@@ -210,6 +211,8 @@ def build_parser():
     parser.add_argument("--log-level", default=None,
                         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
                         help="日志级别（覆盖配置文件里的值）")
+    parser.add_argument("--audit", action="store_true",
+                        help="同时做安全基线审计（检查 telnet/SNMP/ACL 等 10 项）")
     parser.add_argument("--show-config", action="store_true",
                         help="打印最终生效的配置后退出（排查“为什么用了这个值”）")
     parser.add_argument("--dump-config", metavar="JSON",
@@ -313,7 +316,7 @@ def fetch_config(dev, cfg, mock):
 
 
 # ---------- 巡检单台 ----------
-def inspect_one(dev, cfg, mock):
+def inspect_one(dev, cfg, mock, audit=False):
     rec = InspectResult(dev.name, dev.ip)
     t0 = time.time()
     try:
@@ -344,6 +347,14 @@ def inspect_one(dev, cfg, mock):
         else:
             logger.info("%s 成功，%d 字节，%d 个接口", dev.name, rec.bytes, rec.ifaces)
 
+        # 安全基线审计（只在 --audit 时做，因为要逐项跑检查）
+        if audit:
+            rec.findings = audit_config(config)
+            rec.score = score_of(rec.findings)
+            h, m, l = count_by_level(rec.findings)
+            logger.info("%s 安全基线：%d 分（高危 %d，中危 %d，低危 %d）",
+                        dev.name, rec.score, h, m, l)
+
     rec.elapsed = round(time.time() - t0, 2)
     if not rec.ok:
         logger.debug("%s 耗时 %.2f 秒，状态 %s", dev.name, rec.elapsed, rec.status)
@@ -351,11 +362,11 @@ def inspect_one(dev, cfg, mock):
 
 
 # ---------- 并发巡检 ----------
-def check_all(devices, cfg, mock):
+def check_all(devices, cfg, mock, audit=False):
     results = []
     max_workers = cfg.concurrency.max_workers
     with ThreadPoolExecutor(max_workers=max_workers) as pool:
-        futures = [pool.submit(inspect_one, d, cfg, mock) for d in devices]
+        futures = [pool.submit(inspect_one, d, cfg, mock, audit) for d in devices]
         for fut in as_completed(futures):
             results.append(fut.result())
 
@@ -373,26 +384,85 @@ def pad(s, width):
     return s + " " * max(0, width - display_width(s))
 
 
-def print_report(results, start, cost):
+def print_report(results, start, cost, audit=False):
     line = "-" * 88
-    print("\n" + "=" * 88)
+    print()
+    print("=" * 88)
     print(f"巡检报告  {start}")
     print("=" * 88)
-    print(f"{pad('Device', 8)}{pad('IP', 18)}{pad('Sysname', 10)}"
-          f"{pad('Status', 12)}{pad('Bytes', 8)}{pad('Ifaces', 8)}Time")
+    head = (f"{pad('Device', 8)}{pad('IP', 18)}{pad('Sysname', 10)}"
+            f"{pad('Status', 12)}{pad('Bytes', 8)}{pad('Ifaces', 8)}{pad('Time', 8)}")
+    if audit:
+        head += pad("Score", 8)
+    print(head)
     print(line)
     for r in results:
-        print(f"{pad(r.name, 8)}{pad(r.ip, 18)}{pad(r.sysname, 10)}"
-              f"{pad(r.status, 12)}{pad(str(r.bytes), 8)}"
-              f"{pad(str(r.ifaces), 8)}{r.elapsed}s")
+        row = (f"{pad(r.name, 8)}{pad(r.ip, 18)}{pad(r.sysname, 10)}"
+               f"{pad(r.status, 12)}{pad(str(r.bytes), 8)}"
+               f"{pad(str(r.ifaces), 8)}{pad(f'{r.elapsed}s', 8)}")
+        if audit:
+            row += pad("-" if r.score is None else str(r.score), 8)
+        print(row)
         if r.drift:
             print(f"        ⚠ 配置漂移：{r.drift}")
+        if audit and r.score is not None:
+            print_security_detail(r)
     print(line)
 
     ok = sum(1 for r in results if r.ok)
     drift = sum(1 for r in results if r.drift)
     print(f"共 {len(results)} 台，成功 {ok} 台，失败 {len(results) - ok} 台"
           f"，配置漂移 {drift} 台，总耗时 {cost:.2f} 秒")
+
+    if audit:
+        print_audit_summary(results)
+
+
+def print_security_detail(rec):
+    """打印一台设备的不合规项明细。
+
+    只打印不合规的 —— 10 项全打出来会淹没重点。
+    想看全部合规项的话加 --audit-all，这个留给作业。
+    """
+    for f in rec.findings:
+        if f.passed:
+            continue
+        print(f"        ✗ [{f.level}] {f.name}")
+        if f.detail:
+            print(f"            {f.detail}")
+        if f.fix:
+            print(f"            建议：{f.fix}")
+
+
+def print_audit_summary(results):
+    """整体安全状况汇总。"""
+    scored = [r for r in results if r.score is not None]
+    if not scored:
+        return
+
+    high = sum(r.count_level("高") for r in scored)
+    medium = sum(r.count_level("中") for r in scored)
+    low = sum(r.count_level("低") for r in scored)
+    avg = sum(r.score for r in scored) / len(scored)
+    clean = sum(1 for r in scored if r.score == 100)
+
+    print()
+    print("=" * 88)
+    print("安全基线汇总")
+    print("=" * 88)
+    print(f"共审计 {len(scored)} 台，全部合规 {clean} 台，平均分 {avg:.1f}")
+    print(f"不合规项合计：高危 {high} 个，中危 {medium} 个，低危 {low} 个")
+
+    counter = {}
+    for r in scored:
+        for f in r.findings:
+            if not f.passed:
+                counter[f.name] = counter.get(f.name, 0) + 1
+    if counter:
+        print()
+        print("问题排行（按影响设备数）：")
+        for name, n in sorted(counter.items(), key=lambda kv: -kv[1]):
+            print(f"  {pad(name, 26)}{n} 台")
 
 
 def save_report(results, cfg):
@@ -401,7 +471,8 @@ def save_report(results, cfg):
     path = os.path.join(cfg.paths.reports, f"{stamp}.csv")
 
     fieldnames = ["name", "ip", "sysname", "status",
-                  "bytes", "ifaces", "elapsed", "note", "drift"]
+                  "bytes", "ifaces", "elapsed", "note", "drift",
+                  "score", "high", "medium", "low"]
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -463,10 +534,10 @@ def main(argv=None):
 
     start = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     t0 = time.time()
-    results = check_all(devices, cfg, mock=not args.real)
+    results = check_all(devices, cfg, mock=not args.real, audit=args.audit)
     cost = time.time() - t0
 
-    print_report(results, start, cost)
+    print_report(results, start, cost, audit=args.audit)
     save_report(results, cfg)
 
     ok = sum(1 for r in results if r.ok)

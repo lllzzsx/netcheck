@@ -9,4 +9,21 @@ interface Vlanif100
 interface LoopBack0
  ip address 2.2.2.2 255.255.255.255
 #
+user-interface vty 0 4
+ authentication-mode aaa
+ acl 2000 inbound
+#
+aaa
+#
+local-user netdev password irreversible-cipher %^%#x^%^#
+local-user netdev service-type ssh
+#
+snmp-agent community read NetMon_2026
+#
+ssh server compatible-ssh1x disable
+#
+info-center loghost 192.168.106.200
+#
+ntp-service unicast-server 192.168.106.201
+#
 return

@@ -82,6 +82,9 @@ class InspectResult:
         self.elapsed = 0.0
         self.note = ""
         self.drift = ""
+        # 安全基线审计结果（--audit 时才填）
+        self.score = None            # None = 没做审计；100 = 全部合规
+        self.findings = []           # list[security.Finding]
 
     @property
     def ok(self):
@@ -100,7 +103,20 @@ class InspectResult:
             "elapsed": self.elapsed,
             "note": self.note,
             "drift": self.drift,
+            "score": "" if self.score is None else self.score,
+            "high": self.count_level("高"),
+            "medium": self.count_level("中"),
+            "low": self.count_level("低"),
         }
+
+    def count_level(self, level):
+        """统计某一等级的不合规项数量。
+
+        为什么要有这个方法而不是在报表里直接 sum(...)：
+        报表代码不该知道 Finding 的内部结构（level / passed 字段名），
+        那样以后 Finding 改字段，报表也得跟着改。把它封装在这里。
+        """
+        return sum(1 for f in self.findings if not f.passed and f.level == level)
 
     def __repr__(self):
         return f"<InspectResult {self.name} {self.status} {self.bytes}B>"

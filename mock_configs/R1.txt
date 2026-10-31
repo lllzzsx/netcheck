@@ -1,6 +1,8 @@
 #
 sysname R1
 #
+telnet server enable
+#
 vlan batch 10
 #
 interface Vlanif10
@@ -8,5 +10,13 @@ interface Vlanif10
 #
 interface LoopBack0
  ip address 1.1.1.1 255.255.255.255
+#
+user-interface vty 0 4
+ authentication-mode password
+#
+snmp-agent community read public
+#
+local-user admin password irreversible-cipher %^%#x^%^#
+local-user admin service-type telnet
 #
 return
